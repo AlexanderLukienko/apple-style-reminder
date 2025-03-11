@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { nanoid } from 'nanoid';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +18,7 @@ interface Task {
   id: string;
   title: string;
   frequency: number;
+  timeUnit: 'minute' | 'hour' | 'day';
   lastCompleted: number;
 }
 
@@ -33,7 +33,9 @@ const App = () => {
   const [completions, setCompletions] = useState<Completion[]>([]);
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [newTaskFrequency, setNewTaskFrequency] = useState(24);
+  const [newTaskFrequency, setNewTaskFrequency] = useState(1);
+  const [newTaskTimeUnit, setNewTaskTimeUnit] = useState<'minute' | 'hour' | 'day'>('hour');
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
 
   useEffect(() => {
     const savedTasks = localStorage.getItem('tasks');
@@ -46,13 +48,48 @@ const App = () => {
       setCompletions(JSON.parse(savedCompletions));
     }
 
-    if ('Notification' in window) {
-      Notification.requestPermission();
-    }
+    // Request notification permission and handle the response
+    const setupNotifications = async () => {
+      if (!('Notification' in window)) {
+        console.log('Notifications not supported in this browser');
+        return;
+      }
+
+      console.log('Current notification permission:', Notification.permission);
+
+      if (Notification.permission === 'default') {
+        const permission = await Notification.requestPermission();
+        console.log('Permission request result:', permission);
+        setNotificationPermission(permission);
+        
+        if (permission === 'granted') {
+          // Test notification
+          try {
+            const notification = new Notification('Тест уведомлений', {
+              body: 'Уведомления работают корректно',
+              icon: '/icon-192.png'
+            });
+            console.log('Test notification sent successfully');
+          } catch (error) {
+            console.error('Error sending test notification:', error);
+          }
+        }
+      } else {
+        setNotificationPermission(Notification.permission);
+      }
+    };
+
+    setupNotifications();
 
     // Register service worker
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/service-worker.js');
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(registration => {
+          console.log('Service Worker registered successfully:', registration);
+        })
+        .catch(error => {
+          console.error('Service Worker registration failed:', error);
+        });
     }
   }, []);
 
@@ -70,11 +107,13 @@ const App = () => {
         id: nanoid(),
         title: newTaskTitle.trim(),
         frequency: newTaskFrequency,
+        timeUnit: newTaskTimeUnit,
         lastCompleted: Date.now(),
       };
       setTasks([...tasks, newTask]);
       setNewTaskTitle('');
-      setNewTaskFrequency(24);
+      setNewTaskFrequency(1);
+      setNewTaskTimeUnit('hour');
       setIsAddingTask(false);
     }
   };
@@ -96,13 +135,17 @@ const App = () => {
     setTasks(tasks.filter(task => task.id !== taskId));
   };
 
-  const handleEdit = (taskId: string, newTitle: string, newFrequency: number) => {
+  const handleEdit = (taskId: string, newTitle: string, newFrequency: number, newTimeUnit: 'minute' | 'hour' | 'day') => {
     setTasks(tasks.map(task => {
       if (task.id === taskId) {
-        return { ...task, title: newTitle, frequency: newFrequency };
+        return { ...task, title: newTitle, frequency: newFrequency, timeUnit: newTimeUnit };
       }
       return task;
     }));
+  };
+
+  const handleClearHistory = () => {
+    setCompletions([]);
   };
 
   return (
@@ -130,15 +173,31 @@ const App = () => {
                     className="mt-1"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="frequency">Частота (часы)</Label>
-                  <Input
-                    id="frequency"
-                    type="number"
-                    value={newTaskFrequency}
-                    onChange={(e) => setNewTaskFrequency(Number(e.target.value))}
-                    className="mt-1"
-                  />
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <Label htmlFor="frequency">Частота</Label>
+                    <Input
+                      id="frequency"
+                      type="number"
+                      min="1"
+                      value={newTaskFrequency}
+                      onChange={(e) => setNewTaskFrequency(Number(e.target.value))}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Label htmlFor="timeUnit">Единица времени</Label>
+                    <select
+                      id="timeUnit"
+                      value={newTaskTimeUnit}
+                      onChange={(e) => setNewTaskTimeUnit(e.target.value as 'minute' | 'hour' | 'day')}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1"
+                    >
+                      <option value="minute">Минуты</option>
+                      <option value="hour">Часы</option>
+                      <option value="day">Дни</option>
+                    </select>
+                  </div>
                 </div>
                 <Button onClick={handleAddTask} className="w-full">
                   Добавить
@@ -160,7 +219,24 @@ const App = () => {
               />
             ))}
           </div>
-          <Stats completions={completions} />
+          
+          <div className="mt-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold">История</h2>
+              {completions.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClearHistory}
+                  className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Очистить историю
+                </Button>
+              )}
+            </div>
+            <Stats completions={completions} />
+          </div>
         </main>
       </div>
     </div>
