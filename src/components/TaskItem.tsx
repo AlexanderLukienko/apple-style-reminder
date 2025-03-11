@@ -51,16 +51,21 @@ export const TaskItem = ({
           });
         }
       } else {
-        const hours = Math.floor(diff / (60 * 60 * 1000));
-        const minutes = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
-        setTimeLeft(`${hours}ч ${minutes}м`);
-      }
-    };
+      const totalSeconds = Math.floor(diff / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
 
-    updateTime();
-    const interval = setInterval(updateTime, 60000);
-    return () => clearInterval(interval);
-  }, [lastCompleted, frequency, title]);
+      const formattedTime = `${hours.toString().padStart(2, '0')}ч ${minutes.toString().padStart(2, '0')}м ${seconds.toString().padStart(2, '0')}с`;
+
+      setTimeLeft(formattedTime);
+    }
+  };
+
+  updateTime();
+  const interval = setInterval(updateTime, 1000); // обновляем каждую секунду
+  return () => clearInterval(interval);
+}, [lastCompleted, frequency, title]);
 
   const handleEdit = () => {
     onEdit(id, editTitle, editFrequency);
