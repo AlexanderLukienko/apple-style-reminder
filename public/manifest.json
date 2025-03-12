@@ -1,4 +1,3 @@
-
 {
   "name": "Задачи",
   "short_name": "Задачи",
@@ -7,6 +6,8 @@
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
+  "orientation": "portrait",
+  "scope": "/",
   "icons": [
     {
       "src": "/icon-192.png",
@@ -20,5 +21,18 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "Добавить задачу",
+      "short_name": "Добавить",
+      "description": "Создать новую задачу",
+      "url": "/?action=new",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "dir": "ltr",
+  "lang": "ru",
+  "prefer_related_applications": false
 }
